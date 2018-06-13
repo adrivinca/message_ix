@@ -1,15 +1,47 @@
-
+import pandas as pd
 import matplotlib.pyplot as plt
-
-firstyear = 2010
-
 
 
 class Plots(object):
 
-    def __init__(self, ds, country):
+    def __init__(self, ds, country, firstyear=2010):
         self.ds = ds
         self.country = country
+        self.firstyear = firstyear
+
+    def historic_data(self, par, year_col, subset=None):
+        df = self.ds.par(par)
+        if subset is not None:
+            df = df[df['technology'].isin(subset)]
+        idx = [year_col, 'technology']
+        df = df[idx + ['value']].groupby(idx).sum().reset_index()
+        df = df.pivot(index=year_col, columns='technology',
+                      values='value')
+        return df
+
+    def model_data(self, var, year_col='year_act', baseyear=False, subset=None):
+        df = self.ds.var(var)
+        df = df[df['year_vtg'] >= self.firstyear]
+        if not baseyear:
+            df = df[df['year_vtg'] > self.firstyear]
+        if subset is not None:
+            df = df[df['technology'].isin(subset)]
+        idx = [year_col, 'technology']
+        cols = idx + ['year_vtg', 'lvl']
+        df = df[list(set(cols))].groupby(idx)['lvl'].sum().reset_index()
+        df = df.pivot(index=year_col, columns='technology',
+                      values='lvl')
+        df = df.rename(columns={'lvl': 'value'})
+        return df
+
+    def equ_data(self, equ, value, baseyear=False, subset=None):
+        df = self.ds.equ(equ)
+        if not baseyear:
+            df = df[df['year'] > self.firstyear]
+        if subset is not None:
+            df = df[df['commodity'].isin(subset)]
+        df = df.pivot(index='year', columns='commodity', values=value)
+        return df
 
     def plot_demand(self, light_demand, elec_demand):
         fig, ax = plt.subplots()
@@ -22,59 +54,50 @@ class Plots(object):
         plt.xlabel('Year')
         plt.legend(loc='best')
 
-    def plot_vintages(self, var, baseyear=False, subset=None):
-        df = self.ds.var(var)
-        if not baseyear:
-            df = df[df['year_vtg'] > firstyear]
-        if subset is not None:
-            df = df[df['technology'].isin(subset)]
-        idx = ['year_act', 'technology']
-        df = df[idx + ['year_vtg', 'lvl']].groupby(idx).sum().reset_index()
-        df.pivot(index='year_act', columns='technology',
-                 values='lvl').plot.bar(stacked=True)
-
     def plot_activity(self, baseyear=False, subset=None):
-        self.plot_vintages('ACT', baseyear=baseyear, subset=subset)
+        h = self.historic_data('historical_activity', 'year_act', subset=subset)
+        m = self.model_data('ACT', baseyear=baseyear, subset=subset)
+        df = pd.concat([h, m]) if not h.empty else m
+        df.plot.bar(stacked=True)
         plt.title('{} Energy System Activity'.format(self.country.title()))
         plt.ylabel('GWa')
         plt.xlabel('Year')
         plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
 
     def plot_capacity(self, baseyear=False, subset=None):
-        self.plot_vintages('CAP', baseyear=baseyear, subset=subset)
+        df = self.model_data('CAP', baseyear=baseyear, subset=subset)
+        df.plot.bar(stacked=True)
         plt.title('{} Energy System Capacity'.format(self.country.title()))
         plt.ylabel('GWa')
         plt.xlabel('Year')
         plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
 
-    def plot_no_vintage(self, var, baseyear=False, subset=None):
-        df = self.ds.var(var)
-        if not baseyear:
-            df = df[df['year_vtg'] > firstyear]
-        if subset is not None:
-            df = df[df['technology'].isin(subset)]
-        df.pivot(index='year_vtg', columns='technology',
-                 values='lvl').plot.bar(stacked=True)
-
     def plot_new_capacity(self, baseyear=False, subset=None):
-        self.plot_no_vintage('CAP_NEW', baseyear=baseyear, subset=subset)
+        h = self.historic_data('historical_new_capacity', 'year_vtg', subset=subset)
+        m = self.model_data('CAP_NEW', 'year_vtg', baseyear=baseyear, subset=subset)
+        df = pd.concat([h, m], sort=True) if not h.empty else m
+        df.plot.bar(stacked=True)
         plt.title('{} Energy System New Capcity'.format(self.country.title()))
         plt.ylabel('GWa')
         plt.xlabel('Year')
         plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
 
-    def plot_equ(self, equ, value, baseyear=False, subset=None):
-        df = self.ds.equ(equ)
+    def plot_prices(self, baseyear=False, subset=None):
+        df = self.ds.var('PRICE_COMMODITY')
         if not baseyear:
-            df = df[df['year'] > firstyear]
+            df = df[df['year'] > self.firstyear]
         if subset is not None:
             df = df[df['commodity'].isin(subset)]
-        df = df.pivot(index='year', columns='commodity', values=value)
+        idx = ['year', 'commodity']
+        df = (df[idx + ['lvl']]
+              .groupby(idx)
+              .sum().
+              reset_index()
+              .pivot(index='year', columns='commodity',
+                      values='lvl')
+              .rename(columns={'lvl': 'value'})
+        )
         df.plot.bar(stacked=False)
-
-    def plot_prices(self, baseyear=False, subset=None):
-        self.plot_equ('COMMODITY_BALANCE', 'mrg',
-                      baseyear=baseyear, subset=subset)
         plt.title('{} Energy System Prices'.format(self.country.title()))
         plt.ylabel('$/GWa')
         plt.xlabel('Year')
