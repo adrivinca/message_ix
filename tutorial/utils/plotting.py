@@ -21,17 +21,18 @@ class Plots(object):
 
     def model_data(self, var, year_col='year_act', baseyear=False, subset=None):
         df = self.ds.var(var)
-        df = df[df['year_vtg'] >= self.firstyear]
-        if not baseyear:
-            df = df[df['year_vtg'] > self.firstyear]
         if subset is not None:
             df = df[df['technology'].isin(subset)]
         idx = [year_col, 'technology']
-        cols = idx + ['year_vtg', 'lvl']
-        df = df[list(set(cols))].groupby(idx)['lvl'].sum().reset_index()
-        df = df.pivot(index=year_col, columns='technology',
-                      values='lvl')
-        df = df.rename(columns={'lvl': 'value'})
+        df = (df[idx + ['lvl']]
+              .groupby(idx)
+              .sum()
+              .reset_index()
+              .pivot(index=year_col, columns='technology',
+                     values='lvl')
+              .rename(columns={'lvl': 'value'})
+              )
+        df = df[df.index >= self.firstyear]
         return df
 
     def equ_data(self, equ, value, baseyear=False, subset=None):
@@ -97,8 +98,9 @@ class Plots(object):
                       values='lvl')
               .rename(columns={'lvl': 'value'})
         )
+        df = df / 8760 / 1e6 * 100
         df.plot.bar(stacked=False)
         plt.title('{} Energy System Prices'.format(self.country.title()))
-        plt.ylabel('$/GWa')
+        plt.ylabel('cents/kWhr')
         plt.xlabel('Year')
         plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
