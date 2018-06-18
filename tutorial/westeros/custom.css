@@ -6,8 +6,8 @@
 }
 
 body { /* Change the logo urls in the line after if needed */
-    background: url("assests/logo-short_blue.png"), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='40px' width='auto'><text x='10' y='20' fill='grey' font-size='20'> foo CNRS Summer School 2018: MESSAGEix </text></svg>");
-    background-size: 20%, 95%;
+    background: url("assests/logo-short_blue.png"), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='40px' width='auto'><text x='10' y='20' fill='grey' font-size='20'> CNRS Summer School 2018, gidden@iiasa.ac.at </text></svg>");
+    background-size: 5%, 95%;
     background-position: 5% 5%, 100% 98%;
     background-repeat: no-repeat, no-repeat;
 }
