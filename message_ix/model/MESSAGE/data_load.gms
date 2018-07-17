@@ -124,6 +124,9 @@ operation_factor(node,tec,year_all2,year_all)$( map_tec(node,tec,year_all)
 emission_scaling(type_emission,emission)$( cat_emission(type_emission,emission)
         and not emission_scaling(type_emission,emission) ) = 1 ;
 
+map_rat_flex(node,tec,vintage,year_all,mode,time,rating)$(
++    SUM((commodity,level), flexibility_factor(node,tec,vintage,year_all,mode,commodity,level,time,rating) ) ) = yes;
+
 *----------------------------------------------------------------------------------------------------------------------*
 * sanity checks on the data set                                                                                        *
 *----------------------------------------------------------------------------------------------------------------------*

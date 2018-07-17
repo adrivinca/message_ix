@@ -120,6 +120,8 @@ Positive Variables
     ACT_LO(node,tec,year_all,time)   relaxation variable for dynamic constraints on activity (downwards)
 * land-use model emulator
     LAND(node,land_scenario,year_all) relative share of land-use scenario
+* ACT exploring the rating dimension
+    ACT_FLEX(node,tec,vintage,year_all,mode,time,rating)
 
 Variables
 * intertemporal stock variables (input or output quantity into the stock)
@@ -282,6 +284,9 @@ Equations
     RELATION_EQUIVALENCE            auxiliary equation to simplify the implementation of relations
     RELATION_CONSTRAINT_UP          upper bound of relations (linear constraints)
     RELATION_CONSTRAINT_LO          lower bound of relations (linear constraints)
+    OPERATING_RESERVE_CONSTRAINT
+    FLEXIBILITY_PROVISION
+    FLEX_ACT_CAP_RELATION
 ;
 
 *----------------------------------------------------------------------------------------------------------------------*
@@ -852,6 +857,27 @@ FIRM_CAPACITY_PROVISION(node,inv_tec,year,commodity,level)$(
 * This constraint ensures that, in each sub-annual time slice, there is a sufficient share of flexible technologies in
 * the power generation mix. This heading is a placeholder for a new formulation using the extended index set structure.
 ***
+
+OPERATING_RESERVE_CONSTRAINT(node,year,commodity,level,time)..
+  SUM(rating,  SUM( (tec,vintage,mode), flexibility_factor(node,tec,vintage,year,mode,commodity,level,time,rating) *
+        SUM( (location,time2)$(map_tec_act(location,tec,year,mode,time2) AND map_tec_lifetime(location,tec,vintage,year) ),
+              ( output(location,tec,vintage,year,mode,node,commodity,level,time2,time) +
+                input(location,tec,vintage,year,mode,node,commodity,level,time2,time) )
+              * duration_time_rel(time,time2)
+              * ACT_FLEX(location,tec,vintage,year,mode,time2,rating) ) )    )
+    =G= 0 ;
+
+
+FLEXIBILITY_PROVISION(node,tec,vintage,year,mode,time)$(sum(rating, map_rat_flex(node,tec,vintage,year,mode,time,rating)) )..
+    SUM((rating)$map_rat_flex(node,tec,vintage,year,mode,time,rating),ACT_FLEX(node,tec,vintage,year,mode,time,rating))
+    =E= ACT(node,tec,vintage,year,mode,time)
+;
+
+FLEX_ACT_CAP_RELATION(node,inv_tec,vintage,year,time,rating)$( map_tec_time(node,inv_tec,year,time)
+         AND map_tec_lifetime(node,inv_tec,vintage,year) )..
+     SUM(mode$( map_tec_act(node,inv_tec,year,mode,time) ), ACT_FLEX(node,inv_tec,vintage,year,mode,time,rating) )
+     =L= SUM((commodity,level)$map_rating(node,inv_tec,commodity,level,rating,year),
+duration_time(time) * capacity_factor(node,inv_tec,vintage,year,time) *CAP_FIRM(node,inv_tec,commodity,level,year,rating) );
 
 
 ***
@@ -1549,6 +1575,9 @@ Model MESSAGE_LP /
     RELATION_EQUIVALENCE
     RELATION_CONSTRAINT_UP
     RELATION_CONSTRAINT_LO
+    OPERATING_RESERVE_CONSTRAINT
+    FLEXIBILITY_PROVISION
+    FLEX_ACT_CAP_RELATION
 / ;
 
 MESSAGE_LP.holdfixed = 1 ;

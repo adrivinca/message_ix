@@ -287,6 +287,7 @@ Sets
 
     map_land(node,land_scenario,year_all)            mapping of land-use model emulator scenarios to nodes and years
     map_relation(relation,node,year_all)             mapping of generic (user-defined) relations to nodes and years
+    map_rat_flex(node,tec,vintage,year_all,mode,time,rating) mapping technologies with flexibility and rating
 ;
 
 * additional sets created in GAMS to make notation more concise
